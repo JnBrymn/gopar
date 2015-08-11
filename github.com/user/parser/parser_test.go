@@ -101,6 +101,9 @@ func TestOneOfRule(t *testing.T) {
 }
 
 func TestOneOfThenSequenceRule(t *testing.T) {
+	// this is "tricky" because this will match input="abc" but it's not 
+	// the first or the thing it tries. This tests the ability to "back up" 
+	// and try again
 	rule := SequenceRule{[]Parser{
 		OneOfRule{[]Parser{
 			StringRule{"abx"},
@@ -112,31 +115,24 @@ func TestOneOfThenSequenceRule(t *testing.T) {
 	input := tsbr.NewReader(strings.NewReader("abc"))
 	err := rule.Parse(input)
 	if err != nil {
-		//TODO this fails because of the tsbr swap (*input = *subInput) in 
-		//OneOfRule. This says "make the value of the input the same as the
-		//value of the subInput" but the only value they hold is a pointer to
-		//their sbr - which was already the same thing anyway.
-		//TO FIX: rather than the sbr having a map[*tsbr]int it should be
-		//map[int]int where the key is just some unique identifier of that tsbr
-		//probably in the subscribe part is where they get their id
 		t.Error("unexpected error",err)
 	}
 	
-//	input = tsbr.NewReader(strings.NewReader("goodbye"))
-//	err = rule.Parse(input)
-//	if err != nil {
-//		t.Errorf("unexpected error")
-//	}
-	
-//	input = tsbr.NewReader(strings.NewReader("hell"))
-//	err = rule.Parse(input)
-//	if err == nil {
-//		t.Errorf("expected error, but was none")
-//	}
-//	if err != nil && 
-//		err.Error() != "error at offset 4 in rule OneOf>String>'hello'. EOF" {
-//		t.Errorf("unexpected error message: '%v'",err.Error())
-//	}
+	input = tsbr.NewReader(strings.NewReader("abxbc"))
+	err = rule.Parse(input)
+	if err != nil {
+		t.Error("unexpected error",err)
+	}
+
+	input = tsbr.NewReader(strings.NewReader("aby"))
+	err = rule.Parse(input)
+	if err == nil {
+		t.Errorf("expected error, but was none")
+	}
+	if err != nil && 
+		err.Error() != "error at offset 2 in rule Sequence>String>'bc'. expected 'c' found 'y'" {
+		t.Errorf("unexpected error message: '%v'",err.Error())
+	}
 	
 }
 

@@ -7,7 +7,6 @@ Readers will read as long as it is safe to do so
 package tsbr
 
 import (
-	"fmt"
 	"io"
 	"sync"
 )
@@ -22,8 +21,9 @@ type sharedBufferedReader struct {
 	wrappedReader io.Reader
 	buffer []byte
 	bytesRead int
-	globalOffsets map[*ThreadSafeBufferedReader]int
+	globalOffsets map[int]int
 	mutex sync.Mutex
+	nextSubscriberId int
 }
 
 func newSharedBufferedReader(reader io.Reader) *sharedBufferedReader {
@@ -31,17 +31,18 @@ func newSharedBufferedReader(reader io.Reader) *sharedBufferedReader {
 		wrappedReader:reader,
 		buffer:[]byte{},
 		bytesRead: 0,
-		globalOffsets:map[*ThreadSafeBufferedReader]int{},
+		globalOffsets:map[int]int{},
+		nextSubscriberId: 1,
 	}
 }
 
-func (sbr *sharedBufferedReader) read(b []byte, tsbr *ThreadSafeBufferedReader) (int,error) {
+func (sbr *sharedBufferedReader) read(b []byte, tsbrId int) (int,error) {
 	sbr.mutex.Lock()
 	defer sbr.mutex.Unlock()
 	
 	// fulfill request
 	var err error
-	n1 := copy(b, sbr.buffer[sbr.globalOffsets[tsbr] - sbr.bytesRead:])
+	n1 := copy(b, sbr.buffer[sbr.globalOffsets[tsbrId] - sbr.bytesRead:])
 	n2 := 0
 	if n1 < len(b) {
 		//still more to read
@@ -53,7 +54,7 @@ func (sbr *sharedBufferedReader) read(b []byte, tsbr *ThreadSafeBufferedReader) 
 		}
 	}
 	n := n1+n2
-	sbr.globalOffsets[tsbr] += n 
+	sbr.globalOffsets[tsbrId] += n 
 	
 	// shrink buffer
 	lowestGlobalOffset := MaxInt
@@ -71,53 +72,54 @@ func (sbr *sharedBufferedReader) read(b []byte, tsbr *ThreadSafeBufferedReader) 
 
 /*
 This is used in two cases:
-1) When a new TSBR is created it subscribes itself with parent=nil (indicating
+1) When a new TSBR is created it subscribes itself with parentId=0 (indicating
 it has no parent).
-2) When a TSBR gets Cloned, it subscribes it's child using this. Both parent 
-and child are not nil.
+2) When a TSBR gets Cloned, it subscribes a child using it's id.
+
+In both cases the ID for the new TSBR is returned.
 */
-func (sbr *sharedBufferedReader) subscribe(child, parent *ThreadSafeBufferedReader) {
+func (sbr *sharedBufferedReader) subscribe(parentId int) int {
 	// note this depends upon the fact that alway sbr.globalOffsets[nil]==0
-	parentOffset := sbr.globalOffsets[parent]
-	sbr.globalOffsets[child] = parentOffset
+	parentOffset := sbr.globalOffsets[parentId]
+	childId := sbr.nextSubscriberId
+	sbr.nextSubscriberId += 1
+	sbr.globalOffsets[childId] = parentOffset
+	return childId
 }
 
-func (sbr *sharedBufferedReader) offset(tsbr *ThreadSafeBufferedReader) int {
-	return sbr.globalOffsets[tsbr]
+func (sbr *sharedBufferedReader) offset(tsbrId int) int {
+	return sbr.globalOffsets[tsbrId]
 }
 
-func (sbr *sharedBufferedReader) done(tsbr *ThreadSafeBufferedReader) {
-	delete(sbr.globalOffsets,tsbr)
+func (sbr *sharedBufferedReader) done(tsbrId int) {
+	delete(sbr.globalOffsets,tsbrId)
 }
 
 type ThreadSafeBufferedReader struct {
 	sbr *sharedBufferedReader
+	id int
 }
 
 func NewReader(reader io.Reader) *ThreadSafeBufferedReader {
-	tsbr := &ThreadSafeBufferedReader{newSharedBufferedReader(reader)}
-	tsbr.sbr.subscribe(tsbr,nil)
+	tsbr := &ThreadSafeBufferedReader{newSharedBufferedReader(reader),0}
+	tsbr.id = tsbr.sbr.subscribe(0)
 	return tsbr
 }
 
 func (tsbr *ThreadSafeBufferedReader) Clone() *ThreadSafeBufferedReader {
-	childTsbr := &ThreadSafeBufferedReader{tsbr.sbr}
-	tsbr.sbr.subscribe(childTsbr,tsbr)
+	childTsbr := &ThreadSafeBufferedReader{tsbr.sbr,0}
+	childTsbr.id = tsbr.sbr.subscribe(tsbr.id)
 	return childTsbr
 }
 
 func (tsbr *ThreadSafeBufferedReader) Read(b []byte) (int, error) {
-	return tsbr.sbr.read(b,tsbr)	
+	return tsbr.sbr.read(b,tsbr.id)	
 }
 
 func (tsbr *ThreadSafeBufferedReader) Offset() int {
-	return tsbr.sbr.offset(tsbr)
+	return tsbr.sbr.offset(tsbr.id)
 }
 
 func (tsbr *ThreadSafeBufferedReader) Done() {
-	tsbr.sbr.done(tsbr)
-}
-
-func main() {
-	fmt.Println("sdf")
+	tsbr.sbr.done(tsbr.id)
 }
