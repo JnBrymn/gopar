@@ -3,68 +3,47 @@ package parser
 import (
 	"strings"
 	"testing"
+	"bytes"
 
 	"github.com/user/tsbr"
 )
 
-func TestStringRule(t *testing.T) {
-	rule := StringRule{"hello"}
-	oneByte := make([]byte, 1)
-
-	input := tsbr.NewReader(strings.NewReader("helloX"))
+func expectNoErr(t *testing.T, rule Parser, inText string) {
+	expected := []byte("XYZ123")
+	input := tsbr.NewReader(strings.NewReader(inText + "XYZ123"))
 	err := rule.Parse(input)
+	found := make([]byte,6)
 	if err != nil {
 		t.Error("unexpected error:", err)
 	}
-	if input.Read(oneByte); oneByte[0] != byte('X') {
+	if input.Read(found); bytes.Compare(found,expected) != 0 {
 		t.Error("input reader set to wrong index")
 	}
+}
 
-	input = tsbr.NewReader(strings.NewReader("hell"))
-	err = rule.Parse(input)
+func expectErr(t *testing.T, rule Parser, inText, errText string) {
+	input := tsbr.NewReader(strings.NewReader(inText))
+	err := rule.Parse(input)
 	if err == nil {
 		t.Errorf("expected error, but was none")
 	}
 	if err != nil &&
-		err.Error() != "error at offset 4 in rule String>'hello'. EOF" {
-		t.Errorf("unexpected error: message: '%v'", err.Error())
-	}
-
-	input = tsbr.NewReader(strings.NewReader("helso"))
-	err = rule.Parse(input)
-	if err == nil {
-		t.Errorf("expected error, but was none")
-	}
-	if err != nil &&
-		err.Error() != "error at offset 3 in rule String>'hello'. expected 'l' found 's'" {
+		err.Error() != errText {
 		t.Errorf("unexpected error: message: '%v'", err.Error())
 	}
 }
 
+func TestStringRule(t *testing.T) {
+	rule := StringRule{"hello"}
+	expectNoErr(t,rule,"hello")
+	expectErr(t,rule,"hell","error at offset 4 in rule String>'hello'. EOF")
+	expectErr(t,rule,"helso","error at offset 3 in rule String>'hello'. expected 'l' found 's'")
+}
+
 func TestStringRuleWithUnicode(t *testing.T) {
 	rule := StringRule{"abcあいうえおdef"}
-		oneByte := make([]byte, 1)
-
-	input := tsbr.NewReader(strings.NewReader("abcあいうえおdefX"))
-	err := rule.Parse(input)
-	if err != nil {
-		t.Error("unexpected error:", err)
-	}
-	if input.Read(oneByte); oneByte[0] != byte('X') {
-		t.Error("input reader set to wrong index")
-	}
-
-	input = tsbr.NewReader(strings.NewReader("abcあいえおdef"))
-	err = rule.Parse(input)
-	if err == nil {
-		t.Errorf("expected error, but was none")
-	}
-	if err != nil &&
-		// this is techinically wrong because it doesn't "see" the multi-byte
-		// string char
-		err.Error() != "error at offset 11 in rule String>'abcあいうえおdef'. expected '' found ''" {
-		t.Errorf("unexpected error: message: '%v'", err.Error())
-	}
+	expectNoErr(t,rule,"abcあいうえおdef")
+	expectErr(t,rule,"abcあいえおdef","error at offset 11 in rule String>'abcあいうえおdef'. expected '' found ''")
 }
 
 func TestSequenceRule(t *testing.T) {
@@ -72,36 +51,9 @@ func TestSequenceRule(t *testing.T) {
 		StringRule{"hello"},
 		StringRule{"goodbye"},
 	}}
-	oneByte := make([]byte, 1)
-
-	input := tsbr.NewReader(strings.NewReader("hellogoodbyeX"))
-	err := rule.Parse(input)
-	if err != nil {
-		t.Error("unexpected error:", err)
-	}
-	if input.Read(oneByte); oneByte[0] != byte('X') {
-		t.Error("input reader set to wrong index")
-	}
-
-	input = tsbr.NewReader(strings.NewReader("hellgoodbye"))
-	err = rule.Parse(input)
-	if err == nil {
-		t.Errorf("expected error, but was none")
-	}
-	if err != nil &&
-		err.Error() != "error at offset 4 in rule Sequence>String>'hello'. expected 'o' found 'g'" {
-		t.Errorf("unexpected error: message: '%v'", err.Error())
-	}
-
-	input = tsbr.NewReader(strings.NewReader("hellogodbye"))
-	err = rule.Parse(input)
-	if err == nil {
-		t.Errorf("expected error, but was none")
-	}
-	if err != nil &&
-		err.Error() != "error at offset 7 in rule Sequence>String>'goodbye'. expected 'o' found 'd'" {
-		t.Errorf("unexpected error: message: '%v'", err.Error())
-	}
+	expectNoErr(t,rule,"hellogoodbye")
+	expectErr(t,rule,"hellgoodbye","error at offset 4 in rule Sequence>String>'hello'. expected 'o' found 'g'")
+	expectErr(t,rule,"hellogodbye","error at offset 7 in rule Sequence>String>'goodbye'. expected 'o' found 'd'")
 }
 
 func TestOneOfRule(t *testing.T) {
@@ -109,36 +61,9 @@ func TestOneOfRule(t *testing.T) {
 		StringRule{"hello"},
 		StringRule{"goodbye"},
 	}}
-	oneByte := make([]byte, 1)
-
-	input := tsbr.NewReader(strings.NewReader("helloX"))
-	err := rule.Parse(input)
-	if err != nil {
-		t.Error("unexpected error:", err)
-	}
-	if input.Read(oneByte); oneByte[0] != byte('X') {
-		t.Error("input reader set to wrong index")
-	}
-
-	input = tsbr.NewReader(strings.NewReader("goodbyeX"))
-	err = rule.Parse(input)
-	if err != nil {
-		t.Error("unexpected error:", err)
-	}
-	if input.Read(oneByte); oneByte[0] != byte('X') {
-		t.Error("input reader set to wrong index")
-	}
-
-	input = tsbr.NewReader(strings.NewReader("hell"))
-	err = rule.Parse(input)
-	if err == nil {
-		t.Errorf("expected error, but was none")
-	}
-	if err != nil &&
-		err.Error() != "error at offset 4 in rule OneOf>String>'hello'. EOF" {
-		t.Errorf("unexpected error: message: '%v'", err.Error())
-	}
-
+	expectNoErr(t,rule,"hello")
+	expectNoErr(t,rule,"goodbye")
+	expectErr(t,rule,"hell","error at offset 4 in rule OneOf>String>'hello'. EOF")
 }
 
 func TestOneOfThenSequenceRule(t *testing.T) {
@@ -152,35 +77,9 @@ func TestOneOfThenSequenceRule(t *testing.T) {
 		}},
 		StringRule{"bc"},
 	}}
-	oneByte := make([]byte, 1)
-
-	input := tsbr.NewReader(strings.NewReader("abcX"))
-	err := rule.Parse(input)
-	if err != nil {
-		t.Error("unexpected error:", err)
-	}
-	if input.Read(oneByte); oneByte[0] != byte('X') {
-		t.Error("input reader set to wrong index")
-	}
-
-	input = tsbr.NewReader(strings.NewReader("abxbcX"))
-	err = rule.Parse(input)
-	if err != nil {
-		t.Error("unexpected error:", err)
-	}
-	if input.Read(oneByte); oneByte[0] != byte('X') {
-		t.Error("input reader set to wrong index")
-	}
-
-	input = tsbr.NewReader(strings.NewReader("aby"))
-	err = rule.Parse(input)
-	if err == nil {
-		t.Errorf("expected error, but was none")
-	}
-	if err != nil &&
-		err.Error() != "error at offset 2 in rule Sequence>String>'bc'. expected 'c' found 'y'" {
-		t.Errorf("unexpected error: message: '%v'", err.Error())
-	}
+	expectNoErr(t,rule,"abc")
+	expectNoErr(t,rule,"abxbc")
+	expectErr(t,rule,"aby","error at offset 2 in rule Sequence>String>'bc'. expected 'c' found 'y'")
 }
 
 func TestAtLeastNumOfRule(t *testing.T) {
@@ -188,81 +87,22 @@ func TestAtLeastNumOfRule(t *testing.T) {
 		StringRule{"abc"},
 		3,
 	}
-	oneByte := make([]byte, 1)
-
-	input := tsbr.NewReader(strings.NewReader("abcabcabcX"))
-	err := rule.Parse(input)
-	if err != nil {
-		t.Error("unexpected error:", err)
-	}
-	if input.Read(oneByte); oneByte[0] != byte('X') {
-		t.Error("input reader set to wrong index")
-	}
-
-	input = tsbr.NewReader(strings.NewReader("abcabcX"))
-	err = rule.Parse(input)
-	if err == nil {
-		t.Errorf("expected error, but was none")
-	}
-	if err != nil &&
-		err.Error() != "error at offset 6 in rule String>'abc'. expected 'a' found 'X'" {
-		t.Errorf("unexpected error: message: '%v'", err.Error())
-	}
-	if input.Read(oneByte); oneByte[0] != byte('X') {
-		t.Error("input reader set to wrong index")
-	}
-
-	input = tsbr.NewReader(strings.NewReader("abcaXcabc"))
-	err = rule.Parse(input)
-	if err == nil {
-		t.Errorf("expected error, but was none")
-	}
-	if err != nil &&
-		err.Error() != "error at offset 4 in rule String>'abc'. expected 'b' found 'X'" {
-		t.Errorf("unexpected error: message: '%v'", err.Error())
-	}
+	expectNoErr(t,rule,"abcabcabc")
+	expectErr(t,rule,"abcabcX","error at offset 6 in rule String>'abc'. expected 'a' found 'X'")
+	expectErr(t,rule,"abcaXcabc","error at offset 4 in rule String>'abc'. expected 'b' found 'X'")
 }
 
 func TestAsManyAsNumOfRule(t *testing.T) {
-	rule := AsManyAsNumOfRule{
-		StringRule{"abc"},
-		3,
-	}
-	oneByte := make([]byte, 1)
-
-	input := tsbr.NewReader(strings.NewReader("X"))
-	err := rule.Parse(input)
-	if err != nil {
-		t.Error("unexpected error:", err)
-	}
-	if input.Read(oneByte); oneByte[0] != byte('X') {
-		t.Error("input reader set to wrong index")
-	}
-
-	input = tsbr.NewReader(strings.NewReader("abcX"))
-	err = rule.Parse(input)
-	if err != nil {
-		t.Error("unexpected error:", err)
-	}
-	if input.Read(oneByte); oneByte[0] != byte('X') {
-		t.Error("input reader set to wrong index")
-	}
-
-	input = tsbr.NewReader(strings.NewReader("abcabcX"))
-	err = rule.Parse(input)
-	if err != nil {
-		t.Error("unexpected error:", err)
-	}
-	if input.Read(oneByte); oneByte[0] != byte('X') {
-		t.Error("input reader set to wrong index")
-	}
-
-	input = tsbr.NewReader(strings.NewReader("abcabcabcX"))
-	err = rule.Parse(input)
-	if err != nil {
-		t.Error("unexpected error:", err)
-	}
-	if input.Read(oneByte); oneByte[0] != byte('X') {
-		t.Error("input reader set to wrong index")
-	}
+	rule := SequenceRule{[]Parser{
+		AsManyAsNumOfRule{
+			StringRule{"abc"},
+			3,
+		},
+		StringRule{"!"},
+	}}
+	expectNoErr(t,rule,"!")
+	expectNoErr(t,rule,"abc!")
+	expectNoErr(t,rule,"abcabc!")
+	expectNoErr(t,rule,"abcabcabc!")
+	expectErr(t,rule,"abcabcabcabc!","error at offset 9 in rule Sequence>String>'!'. expected '!' found 'a'")
 }

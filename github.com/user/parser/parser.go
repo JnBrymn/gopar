@@ -27,7 +27,7 @@ type AsManyAsNumOfRule struct {
 	num	int
 }
 
-func (rule *AsManyAsNumOfRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
+func (rule AsManyAsNumOfRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
 	var err error
 	subInput := input.Clone()
 	for i:=1; ; i++ {
@@ -52,7 +52,7 @@ type AtLeastNumOfRule struct {
 	num	int
 }
 
-func (rule *AtLeastNumOfRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
+func (rule AtLeastNumOfRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
 	var err error
 	for i:=0; i<rule.num; i++ {
 		err = rule.subRule.Parse(input)
