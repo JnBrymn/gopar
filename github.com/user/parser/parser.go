@@ -22,26 +22,58 @@ type Parser interface {
 	Parse(*tsbr.ThreadSafeBufferedReader) error
 }
 
-type FromToOfRule struct {
-	rule Parser
+type AsManyAsNumOfRule struct {
+	subRule Parser
+	num	int
 }
 
-func (fromToRule *FromToOfRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
+func (rule *AsManyAsNumOfRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
+	var err error
+	subInput := input.Clone()
+	for i:=1; ; i++ {
+		err = rule.subRule.Parse(subInput)
+		if err != nil {
+			subInput.Done()
+			return nil
+		} else {
+			input.Done()
+			*input = *subInput
+			if i<rule.num {
+				subInput = input.Clone()
+			} else {
+				return nil
+			}
+		}
+	}
+}
+
+type AtLeastNumOfRule struct {
+	subRule Parser
+	num	int
+}
+
+func (rule *AtLeastNumOfRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
+	var err error
+	for i:=0; i<rule.num; i++ {
+		err = rule.subRule.Parse(input)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
-
 
 type OneOfRule struct {
 	subRules []Parser
 }
 
-func (oneOfRule OneOfRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
+func (rule OneOfRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
 	var highestErrOffset int = -1
 	errSubRule := ""
 	errSubMsg := ""
-	for _, rule := range oneOfRule.subRules {
+	for _, subRule := range rule.subRules {
 		subInput := input.Clone()
-		err := rule.Parse(subInput)
+		err := subRule.Parse(subInput)
 		if err != nil {
 			subInput.Done()
 			switch err := err.(type) {
@@ -64,12 +96,12 @@ func (oneOfRule OneOfRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
 }
 
 type SequenceRule struct {
-	SubRules []Parser
+	subRules []Parser
 }
 
-func (seqRule SequenceRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
-	for _, rule := range seqRule.SubRules {
-		err := rule.Parse(input)
+func (rule SequenceRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
+	for _, subRule := range rule.subRules {
+		err := subRule.Parse(input)
 		if err != nil {
 			switch err := err.(type) {
 			default:
@@ -90,16 +122,16 @@ type StringRule struct {
 	str string
 }
 
-func (strRule StringRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
+func (rule StringRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
 	//TODO make this more efficient
 	oneByte := make([]byte, 1)
-	for _, chr := range []byte(strRule.str) {
+	for _, chr := range []byte(rule.str) {
 		_, err := input.Read(oneByte)
 		if err != nil {
 			if err == io.EOF {
 				return ParseError{
 					input.Offset(),
-					"String>'" + strRule.str + "'",
+					"String>'" + rule.str + "'",
 					"EOF",
 				}
 			} else {
@@ -109,7 +141,7 @@ func (strRule StringRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
 		if chr != oneByte[0] {
 			return ParseError{
 				input.Offset() - 1,
-				"String>'" + strRule.str + "'",
+				"String>'" + rule.str + "'",
 				fmt.Sprintf("expected '%c' found '%c'", chr, oneByte[0]),
 			}
 		}
