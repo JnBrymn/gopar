@@ -22,15 +22,24 @@ type Parser interface {
 	Parse(*tsbr.ThreadSafeBufferedReader) error
 }
 
+type FromToOfRule struct {
+	rule Parser
+}
+
+func (fromToRule *FromToOfRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
+	return nil
+}
+
+
 type OneOfRule struct {
-	SubRules []Parser
+	subRules []Parser
 }
 
 func (oneOfRule OneOfRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
 	var highestErrOffset int = -1
 	errSubRule := ""
 	errSubMsg := ""
-	for _, rule := range oneOfRule.SubRules {
+	for _, rule := range oneOfRule.subRules {
 		subInput := input.Clone()
 		err := rule.Parse(subInput)
 		if err != nil {
@@ -67,7 +76,7 @@ func (seqRule SequenceRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
 				return err
 			case ParseError:
 				return ParseError{
-					err.Offset, 
+					err.Offset,
 					fmt.Sprintf("Sequence>%s", err.Rule),
 					err.Msg,
 				}
@@ -90,7 +99,7 @@ func (strRule StringRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
 			if err == io.EOF {
 				return ParseError{
 					input.Offset(),
-					"String>'" + strRule.str + "'", 
+					"String>'" + strRule.str + "'",
 					"EOF",
 				}
 			} else {
@@ -101,7 +110,7 @@ func (strRule StringRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
 			return ParseError{
 				input.Offset() - 1,
 				"String>'" + strRule.str + "'",
-				fmt.Sprintf("expected '%c' found '%c'",chr,oneByte[0]),
+				fmt.Sprintf("expected '%c' found '%c'", chr, oneByte[0]),
 			}
 		}
 	}
