@@ -1,4 +1,4 @@
-package tsbr
+package parser
 
 import (
 	"bytes"

@@ -3,8 +3,6 @@ package parser
 import (
 	"fmt"
 	"io"
-
-	"github.com/user/tsbr"
 )
 
 type ParseError struct {
@@ -19,7 +17,7 @@ func (p ParseError) Error() string {
 
 // takes input *ThreadSafeBufferedReader and error if bad parse
 type Parser interface {
-	Parse(*tsbr.ThreadSafeBufferedReader) error
+	Parse(*ThreadSafeBufferedReader) error
 }
 
 type AsManyAsNumOfRule struct {
@@ -27,7 +25,7 @@ type AsManyAsNumOfRule struct {
 	num	int
 }
 
-func (rule AsManyAsNumOfRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
+func (rule AsManyAsNumOfRule) Parse(input *ThreadSafeBufferedReader) error {
 	var err error
 	subInput := input.Clone()
 	for i:=1; ; i++ {
@@ -52,7 +50,7 @@ type AtLeastNumOfRule struct {
 	num	int
 }
 
-func (rule AtLeastNumOfRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
+func (rule AtLeastNumOfRule) Parse(input *ThreadSafeBufferedReader) error {
 	var err error
 	for i:=0; i<rule.num; i++ {
 		err = rule.subRule.Parse(input)
@@ -67,7 +65,7 @@ type OneOfRule struct {
 	subRules []Parser
 }
 
-func (rule OneOfRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
+func (rule OneOfRule) Parse(input *ThreadSafeBufferedReader) error {
 	var highestErrOffset int = -1
 	errSubRule := ""
 	errSubMsg := ""
@@ -99,7 +97,7 @@ type SequenceRule struct {
 	subRules []Parser
 }
 
-func (rule SequenceRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
+func (rule SequenceRule) Parse(input *ThreadSafeBufferedReader) error {
 	for _, subRule := range rule.subRules {
 		err := subRule.Parse(input)
 		if err != nil {
@@ -122,7 +120,7 @@ type StringRule struct {
 	str string
 }
 
-func (rule StringRule) Parse(input *tsbr.ThreadSafeBufferedReader) error {
+func (rule StringRule) Parse(input *ThreadSafeBufferedReader) error {
 	//TODO make this more efficient
 	oneByte := make([]byte, 1)
 	for _, chr := range []byte(rule.str) {

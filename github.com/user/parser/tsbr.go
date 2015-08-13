@@ -4,14 +4,12 @@ reader from which all readers are spawned.
 
 Readers will read as long as it is safe to do so
 */
-package tsbr
+package parser
 
 import (
 	"io"
 	"sync"
 )
-
-const MaxInt = int(^uint(0) >> 1)
 
 type Offsetter interface {
 	Offset() int
