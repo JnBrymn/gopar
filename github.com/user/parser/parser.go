@@ -18,13 +18,16 @@ func (p ParseError) Error() string {
 // takes input *ThreadSafeBufferedReader and error if bad parse
 type Parser interface {
 	Parse(*ThreadSafeBufferedReader) error
+	GetSubRules() []Parser
+	GetName() string
 }
 
-type StringRule struct {
-	str string
+type stringRule struct {
+	str  string
+	name string
 }
 
-func (rule StringRule) Parse(input *ThreadSafeBufferedReader) error {
+func (rule stringRule) Parse(input *ThreadSafeBufferedReader) error {
 	//TODO make this more efficient
 	oneByte := make([]byte, 1)
 	for _, chr := range []byte(rule.str) {
@@ -33,7 +36,7 @@ func (rule StringRule) Parse(input *ThreadSafeBufferedReader) error {
 			if err == io.EOF {
 				return ParseError{
 					input.Offset(),
-					"String>'" + rule.str + "'",
+					fmt.Sprintf("%s>'%s'", rule.name, rule.str),
 					"EOF",
 				}
 			} else {
@@ -43,19 +46,26 @@ func (rule StringRule) Parse(input *ThreadSafeBufferedReader) error {
 		if chr != oneByte[0] {
 			return ParseError{
 				input.Offset() - 1,
-				"String>'" + rule.str + "'",
+				fmt.Sprintf("%s>'%s'", rule.name, rule.str),
 				fmt.Sprintf("expected '%c' found '%c'", chr, oneByte[0]),
 			}
 		}
 	}
 	return nil
 }
-
-type SequenceRule struct {
-	subRules []Parser
+func (rule stringRule) GetSubRules() []Parser {
+	return []Parser{}
+}
+func (rule stringRule) GetName() string {
+	return rule.name
 }
 
-func (rule SequenceRule) Parse(input *ThreadSafeBufferedReader) error {
+type sequenceRule struct {
+	subRules []Parser
+	name     string
+}
+
+func (rule sequenceRule) Parse(input *ThreadSafeBufferedReader) error {
 	for _, subRule := range rule.subRules {
 		err := subRule.Parse(input)
 		if err != nil {
@@ -65,7 +75,7 @@ func (rule SequenceRule) Parse(input *ThreadSafeBufferedReader) error {
 			case ParseError:
 				return ParseError{
 					err.Offset,
-					fmt.Sprintf("Sequence>%s", err.Rule),
+					fmt.Sprintf("%s>%s", rule.name, err.Rule),
 					err.Msg,
 				}
 			}
@@ -73,12 +83,19 @@ func (rule SequenceRule) Parse(input *ThreadSafeBufferedReader) error {
 	}
 	return nil
 }
-
-type OneOfRule struct {
-	subRules []Parser
+func (rule sequenceRule) GetSubRules() []Parser {
+	return rule.subRules
+}
+func (rule sequenceRule) GetName() string {
+	return rule.name
 }
 
-func (rule OneOfRule) Parse(input *ThreadSafeBufferedReader) error {
+type oneOfRule struct {
+	subRules []Parser
+	name     string
+}
+
+func (rule oneOfRule) Parse(input *ThreadSafeBufferedReader) error {
 	var highestErrOffset int = -1
 	errSubRule := ""
 	errSubMsg := ""
@@ -103,31 +120,58 @@ func (rule OneOfRule) Parse(input *ThreadSafeBufferedReader) error {
 			return nil
 		}
 	}
-	return ParseError{highestErrOffset, "OneOf>" + errSubRule, errSubMsg}
+	return ParseError{
+		highestErrOffset,
+		fmt.Sprintf("%s>%s", rule.name, errSubRule),
+		errSubMsg,
+	}
+}
+func (rule oneOfRule) GetSubRules() []Parser {
+	return rule.subRules
+}
+func (rule oneOfRule) GetName() string {
+	return rule.name
 }
 
-type AtLeastNumOfRule struct {
+type atLeastNumOfRule struct {
 	subRule Parser
 	num     int
+	name    string
 }
 
-func (rule AtLeastNumOfRule) Parse(input *ThreadSafeBufferedReader) error {
+func (rule atLeastNumOfRule) Parse(input *ThreadSafeBufferedReader) error {
 	var err error
 	for i := 0; i < rule.num; i++ {
 		err = rule.subRule.Parse(input)
 		if err != nil {
-			return err
+			switch err := err.(type) {
+			default:
+				return err
+			case ParseError:
+				return ParseError{
+					err.Offset,
+					fmt.Sprintf("%s>%s", rule.name, err.Rule),
+					err.Msg,
+				}
+			}
 		}
 	}
 	return nil
 }
-
-type AsManyAsNumOfRule struct {
-	subRule Parser
-	num     int
+func (rule atLeastNumOfRule) GetSubRules() []Parser {
+	return []Parser{rule.subRule}
+}
+func (rule atLeastNumOfRule) GetName() string {
+	return rule.name
 }
 
-func (rule AsManyAsNumOfRule) Parse(input *ThreadSafeBufferedReader) error {
+type asManyAsNumOfRule struct {
+	subRule Parser
+	num     int
+	name    string
+}
+
+func (rule asManyAsNumOfRule) Parse(input *ThreadSafeBufferedReader) error {
 	var err error
 	subInput := input.Clone()
 	for i := 1; ; i++ {
@@ -145,4 +189,10 @@ func (rule AsManyAsNumOfRule) Parse(input *ThreadSafeBufferedReader) error {
 			}
 		}
 	}
+}
+func (rule asManyAsNumOfRule) GetSubRules() []Parser {
+	return []Parser{rule.subRule}
+}
+func (rule asManyAsNumOfRule) GetName() string {
+	return rule.name
 }

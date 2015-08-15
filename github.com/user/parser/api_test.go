@@ -37,8 +37,8 @@ func TestAtLeastNumOf(t *testing.T) {
 		3,
 	)
 	expectNoErr(t, rule, "abcabcabc")
-	expectErr(t, rule, "abcabcX", "error at offset 6 in rule String>'abc'. expected 'a' found 'X'")
-	expectErr(t, rule, "abcaXcabc", "error at offset 4 in rule String>'abc'. expected 'b' found 'X'")
+	expectErr(t, rule, "abcabcX", "error at offset 6 in rule AtLeastNumOf>String>'abc'. expected 'a' found 'X'")
+	expectErr(t, rule, "abcaXcabc", "error at offset 4 in rule AtLeastNumOf>String>'abc'. expected 'b' found 'X'")
 }
 
 func TestAsManyAsNumOf(t *testing.T) {
@@ -73,7 +73,7 @@ func TestOneOrMoreOf(t *testing.T) {
 	expectNoErr(t, rule, "abc")
 	expectNoErr(t, rule, "abcabc")
 	expectNoErr(t, rule, "abcabcabc")
-	expectErr(t, rule, "","error at offset 0 in rule Sequence>String>'abc'. EOF")
+	expectErr(t, rule, "","error at offset 0 in rule OneOrMoreOf>>String>'abc'. EOF")
 }
 
 func TestZeroOrOneOf(t *testing.T) {
