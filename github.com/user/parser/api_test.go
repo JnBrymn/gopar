@@ -7,8 +7,8 @@ import (
 func TestS(t *testing.T) {
 	rule := S("hello")
 	expectNoErr(t, rule, "hello")
-	expectErr(t, rule, "hell", "error at offset 4 in rule String>'hello'. EOF")
-	expectErr(t, rule, "helso", "error at offset 3 in rule String>'hello'. expected 'l' found 's'")
+	expectErr(t, rule, "hell", "error at offset 4 in rule 'hello'. EOF")
+	expectErr(t, rule, "helso", "error at offset 3 in rule 'hello'. expected 'l' found 's'")
 }
 
 func TestSeq(t *testing.T) {
@@ -17,8 +17,8 @@ func TestSeq(t *testing.T) {
 		S("goodbye"),
 	)
 	expectNoErr(t, rule, "hellogoodbye")
-	expectErr(t, rule, "hellgoodbye", "error at offset 4 in rule Sequence>String>'hello'. expected 'o' found 'g'")
-	expectErr(t, rule, "hellogodbye", "error at offset 7 in rule Sequence>String>'goodbye'. expected 'o' found 'd'")
+	expectErr(t, rule, "hellgoodbye", "error at offset 4 in rule Sequence>'hello'. expected 'o' found 'g'")
+	expectErr(t, rule, "hellogodbye", "error at offset 7 in rule Sequence>'goodbye'. expected 'o' found 'd'")
 }
 
 func TestOneOf(t *testing.T) {
@@ -28,7 +28,7 @@ func TestOneOf(t *testing.T) {
 	)
 	expectNoErr(t, rule, "hello")
 	expectNoErr(t, rule, "goodbye")
-	expectErr(t, rule, "hell", "error at offset 4 in rule OneOf>String>'hello'. EOF")
+	expectErr(t, rule, "hell", "error at offset 4 in rule OneOf>'hello'. EOF")
 }
 
 func TestAtLeastNumOf(t *testing.T) {
@@ -37,8 +37,8 @@ func TestAtLeastNumOf(t *testing.T) {
 		3,
 	)
 	expectNoErr(t, rule, "abcabcabc")
-	expectErr(t, rule, "abcabcX", "error at offset 6 in rule AtLeastNumOf>String>'abc'. expected 'a' found 'X'")
-	expectErr(t, rule, "abcaXcabc", "error at offset 4 in rule AtLeastNumOf>String>'abc'. expected 'b' found 'X'")
+	expectErr(t, rule, "abcabcX", "error at offset 6 in rule AtLeastNumOf>'abc'. expected 'a' found 'X'")
+	expectErr(t, rule, "abcaXcabc", "error at offset 4 in rule AtLeastNumOf>'abc'. expected 'b' found 'X'")
 }
 
 func TestAsManyAsNumOf(t *testing.T) {
@@ -53,7 +53,7 @@ func TestAsManyAsNumOf(t *testing.T) {
 	expectNoErr(t, rule, "abc!")
 	expectNoErr(t, rule, "abcabc!")
 	expectNoErr(t, rule, "abcabcabc!")
-	expectErr(t, rule, "abcabcabcabc!", "error at offset 9 in rule Sequence>String>'!'. expected '!' found 'a'")
+	expectErr(t, rule, "abcabcabcabc!", "error at offset 9 in rule Sequence>'!'. expected '!' found 'a'")
 }
 
 func TestZeroOrMoreOf(t *testing.T) {
@@ -73,7 +73,7 @@ func TestOneOrMoreOf(t *testing.T) {
 	expectNoErr(t, rule, "abc")
 	expectNoErr(t, rule, "abcabc")
 	expectNoErr(t, rule, "abcabcabc")
-	expectErr(t, rule, "","error at offset 0 in rule OneOrMoreOf>>String>'abc'. EOF")
+	expectErr(t, rule, "", "error at offset 0 in rule OneOrMoreOf>>'abc'. EOF")
 }
 
 func TestZeroOrOneOf(t *testing.T) {
@@ -84,11 +84,22 @@ func TestZeroOrOneOf(t *testing.T) {
 	expectNoErr(t, rule, "abc")
 }
 
-
 func TestJson(t *testing.T) {
 	rule := ZeroOrOneOf(
 		S("abc"),
 	)
 	expectNoErr(t, rule, "")
 	expectNoErr(t, rule, "abc")
+}
+
+func TestRenaming(t *testing.T) {
+	num := Seq(
+		OneOrMoreOf(
+			OneOfChars("0123456789"),
+		),
+	).Rename("Number")
+	prod := Seq(num, S("*"), num).Rename("Product")
+	sum := Seq(prod, S("+"), prod).Rename("Sum")
+	expectNoErr(t, sum, "33*44+1*3")
+	expectErr(t, sum, "3*4+*35", "error at offset 4 in rule Sum>Product>Number>OneOrMoreOf>>0|1|2|3|4|5|6|7|8|9>'0'. expected '0' found '*'")
 }

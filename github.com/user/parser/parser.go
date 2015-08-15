@@ -20,6 +20,7 @@ type Parser interface {
 	Parse(*ThreadSafeBufferedReader) error
 	GetSubRules() []Parser
 	GetName() string
+	Rename(string) Parser
 }
 
 type stringRule struct {
@@ -36,7 +37,7 @@ func (rule stringRule) Parse(input *ThreadSafeBufferedReader) error {
 			if err == io.EOF {
 				return ParseError{
 					input.Offset(),
-					fmt.Sprintf("%s>'%s'", rule.name, rule.str),
+					fmt.Sprintf("'%s'", rule.str),
 					"EOF",
 				}
 			} else {
@@ -46,7 +47,7 @@ func (rule stringRule) Parse(input *ThreadSafeBufferedReader) error {
 		if chr != oneByte[0] {
 			return ParseError{
 				input.Offset() - 1,
-				fmt.Sprintf("%s>'%s'", rule.name, rule.str),
+				fmt.Sprintf("'%s'", rule.str),
 				fmt.Sprintf("expected '%c' found '%c'", chr, oneByte[0]),
 			}
 		}
@@ -58,6 +59,10 @@ func (rule stringRule) GetSubRules() []Parser {
 }
 func (rule stringRule) GetName() string {
 	return rule.name
+}
+func (rule *stringRule) Rename(name string) Parser {
+	rule.name = name
+	return rule
 }
 
 type sequenceRule struct {
@@ -88,6 +93,10 @@ func (rule sequenceRule) GetSubRules() []Parser {
 }
 func (rule sequenceRule) GetName() string {
 	return rule.name
+}
+func (rule *sequenceRule) Rename(name string) Parser {
+	rule.name = name
+	return rule
 }
 
 type oneOfRule struct {
@@ -132,6 +141,10 @@ func (rule oneOfRule) GetSubRules() []Parser {
 func (rule oneOfRule) GetName() string {
 	return rule.name
 }
+func (rule *oneOfRule) Rename(name string) Parser {
+	rule.name = name
+	return rule
+}
 
 type atLeastNumOfRule struct {
 	subRule Parser
@@ -164,6 +177,10 @@ func (rule atLeastNumOfRule) GetSubRules() []Parser {
 func (rule atLeastNumOfRule) GetName() string {
 	return rule.name
 }
+func (rule *atLeastNumOfRule) Rename(name string) Parser {
+	rule.name = name
+	return rule
+}
 
 type asManyAsNumOfRule struct {
 	subRule Parser
@@ -195,4 +212,8 @@ func (rule asManyAsNumOfRule) GetSubRules() []Parser {
 }
 func (rule asManyAsNumOfRule) GetName() string {
 	return rule.name
+}
+func (rule *asManyAsNumOfRule) Rename(name string) Parser {
+	rule.name = name
+	return rule
 }
