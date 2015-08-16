@@ -1,6 +1,6 @@
 # Gopar - "The go parser that needs a better name"™
 
-So lookey here: I'm using gopar to build up a symple 
+So lookey here: I'm using gopar to build up a simple JSON linter.
 ```
 	digit := OneOfChars("0123456789").Rename("Digit")
 
@@ -80,6 +80,15 @@ So lookey here: I'm using gopar to build up a symple
 		"error at offset 61 in rule Object>'}'. EOF")
 ```
 
+# Future Work
+The next thing is to add a couple of classes so that I can build an abstract syntax tree rather than just check syntax. 
+* A stack to stick nodes of the abstract syntax tree on - the nodes will probably be interface{}
+* collectorRule with collect matching tokens and stick them on the AST stack
+* an assembleRule (needs better name) will provide access to the stack so values can be popped off and reassembled into new AST
+nodes
+
+# Respect!
+* Lots of my thinking is patterned after https://github.com/sirthias/parboiled.
 
 # Notes for later
 
