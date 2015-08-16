@@ -83,4 +83,6 @@ func TestJson(t *testing.T) {
 	
 	//The big test: nested lists and dicts some which are empty
 	expectNoErr(t, object, `{"apple":"red","banana":[1,2],"coconut":{"a":1,"b":[],"c":{}}}`)
+	expectErr(t, object,   `{"apple":"red","banana":[1,2],"coconut":{"a":1,"b":[,"c":{}}}`,
+		"error at offset 29 in rule Object>'}'. expected '}' found ','")
 }
