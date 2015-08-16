@@ -1,7 +1,7 @@
 # Gopar - "The go parser that needs a better name"™
 
 So lookey here: I'm using gopar to build up a simple JSON linter.
-```
+```go
 	digit := OneOfChars("0123456789").Rename("Digit")
 
 	char := OneOfChars(" \t\nabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789~!@#$%^&*()_+`-={}|[]\\:;'<>?,./'").Rename("Char")
@@ -104,7 +104,7 @@ to fetch the next block
 TODO: parser
 
 * There should be a delimited sequence rule. Because I commonly use this pattern
-```
+```go
 Seq(
 	Str("["),
 	ZeroOrOne(
@@ -118,7 +118,7 @@ Seq(
 )
 ```
 With DelimitedSeq this would become simply
-```
+```go
 Seq(
 	Str("["),
 	DelimitedSeq(Val(),Str(","))
