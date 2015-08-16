@@ -1,4 +1,4 @@
-package parser
+package gopar
 
 import "testing"
 
@@ -19,10 +19,10 @@ func TestSequenceRule(t *testing.T) {
 	rule := &sequenceRule{[]Parser{
 		&stringRule{"hello", "String"},
 		&stringRule{"goodbye", "String"},
-	}, "Sequence"}
+	}, "_Sequence"}
 	expectNoErr(t, rule, "hellogoodbye")
-	expectErr(t, rule, "hellgoodbye", "error at offset 4 in rule Sequence>'hello'. expected 'o' found 'g'")
-	expectErr(t, rule, "hellogodbye", "error at offset 7 in rule Sequence>'goodbye'. expected 'o' found 'd'")
+	expectErr(t, rule, "hellgoodbye", "error at offset 4 in rule _Sequence>'hello'. expected 'o' found 'g'")
+	expectErr(t, rule, "hellogodbye", "error at offset 7 in rule _Sequence>'goodbye'. expected 'o' found 'd'")
 }
 
 func TestOneOfRule(t *testing.T) {
@@ -45,10 +45,10 @@ func TestOneOfThenSequenceRule(t *testing.T) {
 			&stringRule{"a","String"},
 		},"OneOf"},
 		&stringRule{"bc","String"},
-	},"Sequence"}
+	},"_Sequence"}
 	expectNoErr(t, rule, "abc")
 	expectNoErr(t, rule, "abxbc")
-	expectErr(t, rule, "aby", "error at offset 2 in rule Sequence>'bc'. expected 'c' found 'y'")
+	expectErr(t, rule, "aby", "error at offset 2 in rule _Sequence>'bc'. expected 'c' found 'y'")
 }
 
 func TestAtLeastNumOfRule(t *testing.T) {
@@ -70,11 +70,11 @@ func TestAsManyAsNumOfRule(t *testing.T) {
 			"",
 		},
 		&stringRule{"!","String"},
-	},"Sequence"}
+	},"_Sequence"}
 	expectNoErr(t, rule, "!")
 	expectNoErr(t, rule, "abc!")
 	expectNoErr(t, rule, "abcabc!")
 	expectNoErr(t, rule, "abcabcabc!")
-	expectErr(t, rule, "abcabcabcabc!", "error at offset 9 in rule Sequence>'!'. expected '!' found 'a'")
+	expectErr(t, rule, "abcabcabcabc!", "error at offset 9 in rule _Sequence>'!'. expected '!' found 'a'")
 }
 

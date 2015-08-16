@@ -1,4 +1,4 @@
-package parser
+package gopar
 
 import (
 	"fmt"
@@ -215,5 +215,31 @@ func (rule asManyAsNumOfRule) GetName() string {
 }
 func (rule *asManyAsNumOfRule) Rename(name string) Parser {
 	rule.name = name
+	return rule
+}
+
+
+type placeholderRule struct {
+	patchRuleName string
+	patchRule Parser 
+}
+
+func (rule placeholderRule) Parse(input *ThreadSafeBufferedReader) error {
+	if rule.patchRule == nil {
+		panic("placeholderRule not patched; use Patch(topLevelParser) to replace these placeholders")
+	}
+	return rule.patchRule.Parse(input)
+}
+func (rule placeholderRule) GetSubRules() []Parser {
+	if rule.patchRule == nil {
+		return []Parser{}
+	}
+	return rule.patchRule.GetSubRules()
+}
+func (rule placeholderRule) GetName() string {
+	return rule.patchRuleName
+}
+func (rule *placeholderRule) Rename(name string) Parser {
+	panic("placeholderRule can not be renamed")
 	return rule
 }

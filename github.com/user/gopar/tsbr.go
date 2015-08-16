@@ -4,7 +4,7 @@ reader from which all readers are spawned.
 
 Readers will read as long as it is safe to do so
 */
-package parser
+package gopar
 
 import (
 	"io"

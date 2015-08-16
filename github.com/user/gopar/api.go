@@ -1,25 +1,25 @@
-package parser
+package gopar
 
 import (
 	"strings"
 )
 
 func S(str string) Parser {
-	return &stringRule{str, "String"}
+	return &stringRule{str, "_String"}
 }
 
 func Seq(parsers ...Parser) Parser {
 	if len(parsers) == 0 {
 		panic("empty sequenceRule not allowed")
 	}
-	return &sequenceRule{parsers, "Sequence"}
+	return &sequenceRule{parsers, "_Sequence"}
 }
 
 func OneOf(parsers ...Parser) Parser {
 	if len(parsers) == 0 {
 		panic("empty oneOfRule not allowed")
 	}
-	return &oneOfRule{parsers, "OneOf"}
+	return &oneOfRule{parsers, "_OneOf"}
 }
 
 func OneOfChars(chars string) Parser {
@@ -33,19 +33,20 @@ func OneOfChars(chars string) Parser {
 			"",
 		}
 	}
-	return &oneOfRule{charParsers, strings.Join(strings.Split(chars,""),"|")}
+	ruleName := "{" + strings.Join(strings.Split(chars,""),"|") + "}"
+	return &oneOfRule{charParsers, ruleName}
 }
 
 func AtLeastNumOf(parser Parser, num int) Parser {
-	return &atLeastNumOfRule{parser, num, "AtLeastNumOf"}
+	return &atLeastNumOfRule{parser, num, "_AtLeastNumOf"}
 }
 
 func AsManyAsNumOf(parser Parser, num int) Parser {
-	return &asManyAsNumOfRule{parser, num, "AsManyAsNumOf"}
+	return &asManyAsNumOfRule{parser, num, "_AsManyAsNumOf"}
 }
 
 func ZeroOrMoreOf(parser Parser) Parser {
-	return &asManyAsNumOfRule{parser, MaxInt, "ZeroOrMoreOf"}
+	return &asManyAsNumOfRule{parser, MaxInt, "_ZeroOrMoreOf"}
 }
 
 func OneOrMoreOf(parser Parser) Parser {
@@ -56,7 +57,11 @@ func OneOrMoreOf(parser Parser) Parser {
 }
 
 func ZeroOrOneOf(parser Parser) Parser {
-	return &asManyAsNumOfRule{parser, 1, "ZeroOrOneOf"}
+	return &asManyAsNumOfRule{parser, 1, "_ZeroOrOneOf"}
+}
+
+func P(parserName string) Parser {
+	return &placeholderRule{patchRuleName:parserName}
 }
 
 
